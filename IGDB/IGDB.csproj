@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<NuspecProperties>version=$(PackageVersion)</NuspecProperties>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<OutputPath>lib</OutputPath>
+
+		<!-- Nuget Publishing -->
+		<PackageId>IGDB</PackageId>
+		<Description> IGDB APIv4 games database .NET Standard 2.0 wrapper. For detailed usage, see https://github.com/kamranayub/igdb-dotnet/blob/master/README.md</Description>
+		<Authors>Kamran Ayub</Authors>
+		<Copyright>Copyright 2020-2023 LordOfCinder</Copyright>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<RepositoryBranch>main</RepositoryBranch>
+		<PackageTags>igdb dotnet games giantbomb gog steam origin</PackageTags>
+		<PackageIconUrl>https://www.igdb.com/apple-touch-icon-72x72.png</PackageIconUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="System.Text.Json" Version="7.0.2" />
+	</ItemGroup>
+</Project>
