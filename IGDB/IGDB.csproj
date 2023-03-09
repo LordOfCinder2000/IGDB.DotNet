@@ -11,7 +11,7 @@
 		<!-- Nuget Publishing -->
 		<PackageId>IGDB</PackageId>
 		<Description> IGDB APIv4 games database .NET Standard 2.0 wrapper. For detailed usage, see https://github.com/kamranayub/igdb-dotnet/blob/master/README.md</Description>
-		<Authors>Kamran Ayub</Authors>
+		<Authors>LordOfCinder2000</Authors>
 		<Copyright>Copyright 2020-2023 LordOfCinder</Copyright>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<RepositoryBranch>main</RepositoryBranch>

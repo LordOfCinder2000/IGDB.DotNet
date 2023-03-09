@@ -1,121 +1,134 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace IGDB
 {
-  public class IdentityConverter : JsonConverter
-  {
-    public override bool CanConvert(Type objectType)
+    public class IdentityConverter : JsonConverterFactory
     {
-      return IsAssignableToGenericType(objectType, typeof(IdentityOrValue<>)) ||
-      IsAssignableToGenericType(objectType, typeof(IdentitiesOrValues<>));
+        public override bool CanConvert(Type typeToConvert)
+            => typeToConvert.IsGenericType
+            && (typeToConvert.GetGenericTypeDefinition() == typeof(IdentityOrValue<>)
+            || typeToConvert.GetGenericTypeDefinition() == typeof(IdentitiesOrValues<>));
+
+        public override JsonConverter CreateConverter(
+            Type typeToConvert, JsonSerializerOptions options)
+        {
+            Type elementType = typeToConvert.GetGenericArguments()[0];
+            JsonConverter converter = default;
+            if (typeToConvert.GetGenericTypeDefinition() == typeof(IdentityOrValue<>))
+            {
+                Debug.Assert(typeToConvert.IsGenericType &&
+                typeToConvert.GetGenericTypeDefinition() == typeof(IdentityOrValue<>));
+
+                converter = (JsonConverter)Activator.CreateInstance(
+                    typeof(IdentityOrValueConverterOfT<>)
+                        .MakeGenericType(new Type[] { elementType }),
+                    BindingFlags.Instance | BindingFlags.Public,
+                    binder: null,
+                    args: null,
+                    culture: null);
+            }
+            else if (typeToConvert.GetGenericTypeDefinition() == typeof(IdentitiesOrValues<>))
+            {
+                Debug.Assert(typeToConvert.IsGenericType &&
+                typeToConvert.GetGenericTypeDefinition() == typeof(IdentitiesOrValues<>));
+
+                converter = (JsonConverter)Activator.CreateInstance(
+                    typeof(IdentitiesOrValuesConverterOfT<>)
+                        .MakeGenericType(new Type[] { elementType }),
+                    BindingFlags.Instance | BindingFlags.Public,
+                    binder: null,
+                    args: null,
+                    culture: null);
+            }
+
+            return converter;
+        }
     }
 
-    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    public class IdentityOrValueConverterOfT<T> : JsonConverter<IdentityOrValue<T>> where T : class
     {
-      if (reader.TokenType == JsonToken.Null)
-      {
-        return existingValue;
-      }
-
-      var expandedType = objectType.GetGenericArguments()[0];
-      var value = reader.Value;
-
-      if (IsAssignableToGenericType(objectType, typeof(IdentitiesOrValues<>)))
-      {
-        if (reader.TokenType != JsonToken.StartArray)
+        public override IdentityOrValue<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-          throw new InvalidCastException("Cannot convert non-array JSON value to IdentitiesOrValues type");
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                // object
+                return (IdentityOrValue<T>)Activator.CreateInstance(typeToConvert, JsonSerializer.Deserialize<T>(ref reader));
+            }
+            else if (reader.TokenType == JsonTokenType.Number)
+            {
+                // int ids
+                return (IdentityOrValue<T>)Activator.CreateInstance(typeof(IdentityOrValue<T>), reader.GetInt64());
+            }
+
+            throw new InvalidCastException("Could not Deserialize JSON into identity");
         }
 
-        // Read first value in array
-        var values = new List<object>();
-        while (reader.Read() && reader.TokenType != JsonToken.EndArray)
+        public override void Write(Utf8JsonWriter writer, IdentityOrValue<T> value, JsonSerializerOptions options)
         {
-          if (reader.TokenType == JsonToken.StartObject)
-          {
-            var obj = serializer.Deserialize(reader, expandedType);
-            // objects
-            values.Add(obj);
-          }
-          else if (reader.TokenType == JsonToken.Integer)
-          {
-            // int ids
-            values.Add(reader.Value);
-          }
+            if (value.Value is null)
+            {
+                JsonSerializer.Serialize(writer, value.Id, options);
+            }
+            else if (value.Id is null)
+            {
+                JsonSerializer.Serialize(writer, value.Value, options);
+            }
         }
-
-        // If any are objects, it means the IDs should be ignored
-        if (values.All(v => v.GetType().IsAssignableFrom(typeof(long))))
-        {
-          return Activator.CreateInstance(objectType, values.Cast<long>().ToArray());
-        }
-
-        var objects = values.Where(v => !v.GetType().IsAssignableFrom(typeof(long)));
-        var convertedValues = objects.ToArray();
-        var ctor = objectType.GetConstructor(new[] { typeof(object[]) });
-        return ctor.Invoke(new[] { convertedValues });
-      }
-      else if (IsAssignableToGenericType(objectType, typeof(IdentityOrValue<>)))
-      {
-        if (reader.TokenType == JsonToken.StartObject)
-        {
-          // objects
-          return Activator.CreateInstance(objectType, serializer.Deserialize(reader, expandedType));
-        }
-        else if (reader.TokenType == JsonToken.Integer)
-        {
-          // int ids
-          return Activator.CreateInstance(objectType, (long)reader.Value);
-        }
-      }
-
-      throw new InvalidCastException("Could not deserialize JSON into identity");
     }
 
-    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    public class IdentitiesOrValuesConverterOfT<T> : JsonConverter<IdentitiesOrValues<T>> where T : class
     {
-      if (value != null)
-      {
-        dynamic identity = value;
+        public override IdentitiesOrValues<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
+            {
+                throw new InvalidCastException("Cannot convert non-array JSON value to IdentitiesOrValues type");
+            }
 
-        if (IsAssignableToGenericType(value.GetType(), typeof(IdentitiesOrValues<>)))
-        {
-          serializer.Serialize(writer, identity.Ids ?? identity.Values ?? null);
+            // Read first value in array
+            var values = new List<object>();
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            {
+                if (reader.TokenType == JsonTokenType.StartObject)
+                {
+                    var obj = JsonSerializer.Deserialize<T>(ref reader, options);
+                    // objects
+                    values.Add(obj);
+                }
+                else if (reader.TokenType == JsonTokenType.Number)
+                {
+                    // int ids
+                    values.Add(reader.GetInt64());
+                }
+            }
+
+            // If any are objects, it means the IDs should be ignored
+            if (values.All(v => v.GetType().IsAssignableFrom(typeof(long))))
+            {
+                return (IdentitiesOrValues<T>)Activator.CreateInstance(typeof(IdentitiesOrValues<T>), values.Cast<long>().ToList());
+            }
+
+            var objects = values.Where(v => !v.GetType().IsAssignableFrom(typeof(long))).Cast<T>().ToList();
+            var ctor = typeToConvert.GetConstructor(new[] { typeof(List<T>) });
+            return (IdentitiesOrValues<T>)ctor.Invoke(new[] { objects });
         }
-        else if (IsAssignableToGenericType(value.GetType(), typeof(IdentityOrValue<>)))
+
+        public override void Write(Utf8JsonWriter writer, IdentitiesOrValues<T> value, JsonSerializerOptions options)
         {
-          serializer.Serialize(writer, identity.Id ?? identity.Value ?? null);
+            if (value.Values is null)
+            {
+                JsonSerializer.Serialize(writer, value.Ids, options);
+            }
+            else if (value.Ids is null)
+            {
+                JsonSerializer.Serialize(writer, value.Values, options);
+            }
         }
-        else
-        {
-          serializer.Serialize(writer, null);
-        }
-      }
     }
-
-    public static bool IsAssignableToGenericType(Type givenType, Type genericType)
-    {
-      var interfaceTypes = givenType.GetInterfaces();
-
-      foreach (var it in interfaceTypes)
-      {
-        if (it.IsGenericType && it.GetGenericTypeDefinition() == genericType)
-          return true;
-      }
-
-      if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType)
-        return true;
-
-      Type baseType = givenType.BaseType;
-      if (baseType == null) return false;
-
-      return IsAssignableToGenericType(baseType, genericType);
-    }
-  }
-
-
 }

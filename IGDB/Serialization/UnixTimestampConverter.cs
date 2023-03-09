@@ -1,54 +1,33 @@
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace IGDB
 {
-  public class UnixTimestampConverter : JsonConverter
-  {
-    public override bool CanConvert(Type objectType)
+    public class UnixTimestampConverter : JsonConverter<DateTimeOffset>
     {
-      return objectType.IsAssignableFrom(typeof(DateTimeOffset));
-    }
-
-    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-    {
-      var defaultDateTime = default(DateTimeOffset);
-
-      if (reader.TokenType != JsonToken.Null)
-      {
-        if (reader.TokenType == JsonToken.Integer)
+        public override DateTimeOffset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-          var rawValue = reader.Value.ToString();
-          long parsedUnixTimestamp;
-          if (long.TryParse(rawValue, out parsedUnixTimestamp))
-          {
-            try
+            if (reader.TokenType == JsonTokenType.Number)
             {
-              return DateTimeOffset.FromUnixTimeSeconds(parsedUnixTimestamp);
+                if (reader.TryGetInt64(out var parsedUnixTimestamp))
+                {
+                    try
+                    {
+                        return DateTimeOffset.FromUnixTimeSeconds(parsedUnixTimestamp);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // it's invalid
+                    }
+                }
             }
-            catch (ArgumentOutOfRangeException)
-            {
-              // it's invalid
-            }
-          }
+            return default;
         }
-      }
-      return defaultDateTime;
-    }
 
-    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    {
-      var offset = value as DateTimeOffset?;
-
-      if (offset.HasValue)
-      {
-        JToken.FromObject(offset.Value.ToUnixTimeSeconds()).WriteTo(writer);
-      }
-      else
-      {
-        JToken.FromObject(value).WriteTo(writer);
-      }
+        public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+        {
+            writer.WriteNumberValue(value.ToUnixTimeSeconds());
+        }
     }
-  }
 }

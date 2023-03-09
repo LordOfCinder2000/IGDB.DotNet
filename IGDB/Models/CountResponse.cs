@@ -1,7 +1,11 @@
+using System.Collections.Generic;
+
 namespace IGDB.Models
 {
-    public class CountResponse
+    public class Response<T>
     {
-        public int Count { get; set; }
+        public List<T> MyProperty { get; set; }
+
+        public int TotalCount { get; set; }
     }
 }
