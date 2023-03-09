@@ -8,6 +8,7 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<Authors>LordOfCinder</Authors>
 		<PackageId>IGDB.Api.DotNet</PackageId>
+		<Product>IGDB.Api.DotNet</Product>
 	</PropertyGroup>
 
 	<ItemGroup>
