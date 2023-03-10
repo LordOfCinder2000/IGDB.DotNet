@@ -85,7 +85,7 @@ namespace IGDB.Models
 
         public string Summary { get; set; }
 
-        public List<int> Tags { get; set; }
+        public List<long> Tags { get; set; }
 
         public IdentitiesOrValues<Theme> Themes { get; set; }
 

@@ -2,9 +2,9 @@
 {
     public static class TagNumberHelper
     {
-        public static int Generate(TagType tagType, int targetId)
+        public static long Generate(TagType tagType, long targetId)
         {
-            var tagNumber = ((int)tagType) << 28;
+            var tagNumber = ((long)tagType) << 28;
             return tagNumber |= targetId;
         }
     }

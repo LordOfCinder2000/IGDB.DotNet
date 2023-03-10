@@ -19,7 +19,7 @@ public class SerializationTests
         var tagNumber = TagNumberHelper.Generate(TagType.Genre, 5);
         var str = new QueryBuilder<Game>(new Apicalypse.Configuration.QueryBuilderOptions { NamingPolicy = NamingPolicy.SnakeCase})
             .Select(g => new {g.Name})
-            .Where(g => new int[] { tagNumber }.IsAnyIn(g.Tags)).Build();
+            .Where(g => new long[] { tagNumber }.IsAnyIn(g.Tags)).Build();
 
         var game = new Game();
         game.ParentGame = new IdentityOrValue<Game>(3);
