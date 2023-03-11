@@ -58,7 +58,7 @@ namespace IGDB
             if (reader.TokenType == JsonTokenType.StartObject)
             {
                 // object
-                return (IdentityOrValue<T>)Activator.CreateInstance(typeToConvert, JsonSerializer.Deserialize<T>(ref reader));
+                return (IdentityOrValue<T>)Activator.CreateInstance(typeToConvert, JsonSerializer.Deserialize<T>(ref reader, options));
             }
             else if (reader.TokenType == JsonTokenType.Number)
             {
